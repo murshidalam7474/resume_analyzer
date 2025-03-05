@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Resume Analysis PDF</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .header { text-align: center; }
+        .section { margin-bottom: 20px; }
+        .chart { text-align: center; margin: 20px 0; }
+        .skill-badge { display: inline-block; padding: 5px 10px; border-radius: 10px; margin: 2px; }
+        .matched { background-color: #d4edda; color: #155724; }
+        .missing { background-color: #f8d7da; color: #721c24; }
+        .recommendation { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; margin-bottom: 10px; }
+        .contact-info { background-color: #f8f9fa; padding: 10px; margin-bottom: 15px; border-radius: 5px; }
+        .contact-item { margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Resume Analysis Results</h1>
+        <p>Analysis for job: {{ job_title }}</p>
+    </div>
+    
+    <div class="section">
+        <h3>Applicant Information</h3>
+        <div class="contact-info">
+            {% if analysis.contact_info.name %}
+                <div class="contact-item"><strong>Name:</strong> {{ analysis.contact_info.name }}</div>
+            {% endif %}
+            {% if analysis.contact_info.email %}
+                <div class="contact-item"><strong>Email:</strong> {{ analysis.contact_info.email }}</div>
+            {% endif %}
+            {% if analysis.contact_info.phone %}
+                <div class="contact-item"><strong>Phone:</strong> {{ analysis.contact_info.phone }}</div>
+            {% endif %}
+            {% if not analysis.contact_info.name and not analysis.contact_info.email and not analysis.contact_info.phone %}
+                <p>No contact information detected in the resume.</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>Overall Match Score: {{ analysis.match_percentage }}%</h2>
+        <div class="chart">
+            <img src="data:image/png;base64,{{ charts.gauge_chart }}" alt="Gauge Chart">
+        </div>
+    </div>
+    
+    <div class="section">
+        <h3>Match Breakdown</h3>
+        <p><strong>Skills Match:</strong> {{ analysis.skill_match_percentage }}%</p>
+        <p><strong>Semantic Match:</strong> {{ analysis.semantic_match_percentage }}%</p>
+    </div>
+    
+    <div class="section">
+        <h3>Skills Analysis</h3>
+        <div>
+            <strong>Matched Skills:</strong>
+            {% if analysis.matched_skills %}
+                {% for skill in analysis.matched_skills %}
+                    <span class="skill-badge matched">{{ skill }}</span>
+                {% endfor %}
+            {% else %}
+                <span>No matched skills found.</span>
+            {% endif %}
+        </div>
+        <div>
+            <strong>Missing Skills:</strong>
+            {% if analysis.missing_skills %}
+                {% for skill in analysis.missing_skills %}
+                    <span class="skill-badge missing">{{ skill }}</span>
+                {% endfor %}
+            {% else %}
+                <span>No missing skills found.</span>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="section">
+        <h3>Recommendations</h3>
+        {% if analysis.recommendations %}
+            {% for recommendation in analysis.recommendations %}
+                <div class="recommendation">{{ recommendation }}</div>
+            {% endfor %}
+        {% else %}
+            <p>No specific recommendations available.</p>
+        {% endif %}
+    </div>
+    
+    <div class="section" style="text-align: center;">
+        <p>© 2025 Resume Analyzer. All rights reserved.</p>
+    </div>
+</body>
+</html>

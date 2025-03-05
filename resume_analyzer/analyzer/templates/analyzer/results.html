@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Results - Resume Analyzer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .match-score { font-size: 64px; font-weight: 700; color: #333; }
+        .good { color: #28a745; }
+        .average { color: #ffc107; }
+        .poor { color: #dc3545; }
+        .skill-badge { margin: 5px; padding: 8px 15px; border-radius: 20px; display: inline-block; font-weight: 500; }
+        .matched { background-color: #d4edda; color: #155724; }
+        .missing { background-color: #f8d7da; color: #721c24; }
+        .recommendation-item { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
+        .progress-bar-container { height: 10px; background-color: #e9ecef; border-radius: 5px; margin-bottom: 20px; }
+        .progress-bar { height: 100%; border-radius: 5px; }
+        .dashboard-chart { margin-bottom: 30px; }
+        .btn-primary { background-color: #4a90e2; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; }
+        .footer { background-color: #2c3e50; color: white; padding: 20px 0; margin-top: 60px; }
+        .contact-info { background-color: #f8f9fa; border-radius: 5px; padding: 15px; margin-bottom: 20px; }
+        .contact-detail { margin: 8px 0; }
+        .contact-icon { margin-right: 10px; width: 20px; text-align: center; color: #4a90e2; }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header bg-primary text-white py-4">
+        <div class="container d-flex justify-content-between align-items-center">
+            <h1>Resume Analysis Results</h1>
+            <a href="{% url 'index' %}" class="btn btn-light">New Analysis</a>
+        </div>
+    </div>
+    <div class="container mt-4">
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Analysis completed for <strong>{{ job_title }}</strong> job description.
+                </div>
+            </div>
+        </div>
+        <!-- Main Dashboard -->
+        <div class="row">
+            <!-- Left Column: Overall Match and Skills -->
+            <div class="col-lg-8">
+                <!-- Overall Match Card -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4><i class="fas fa-percentage me-2"></i> Overall Match Score</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 text-center py-4">
+                                <div class="match-score {% if analysis.match_percentage >= 70 %}good{% elif analysis.match_percentage >= 50 %}average{% else %}poor{% endif %}">
+                                    {{ analysis.match_percentage|floatformat:1 }}%
+                                </div>
+                                <p class="mt-2">
+                                    {% if analysis.match_percentage >= 70 %}
+                                        <span class="badge bg-success">Excellent Match</span>
+                                    {% elif analysis.match_percentage >= 50 %}
+                                        <span class="badge bg-warning text-dark">Good Match</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Needs Improvement</span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-center mb-3">
+                                    <img src="data:image/png;base64,{{ charts.gauge_chart }}" alt="Match Percentage Gauge" class="img-fluid">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Match Categories Card -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4><i class="fas fa-chart-bar me-2"></i> Match Analysis</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-12">
+                                <img src="data:image/png;base64,{{ charts.match_types_chart }}" alt="Match Types Comparison" class="img-fluid">
+                            </div>
+                        </div>
+                        <div class="row mt-4">
+                            <div class="col-md-4">
+                                <h5>Skills Match</h5>
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar {% if analysis.skill_match_percentage >= 70 %}bg-success{% elif analysis.skill_match_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" style="width: {{ analysis.skill_match_percentage }}%"></div>
+                                </div>
+                                <p>{{ analysis.skill_match_percentage|floatformat:1 }}% of required skills found</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h5>Semantic Match</h5>
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar {% if analysis.semantic_match_percentage >= 70 %}bg-success{% elif analysis.semantic_match_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" style="width: {{ analysis.semantic_match_percentage }}%"></div>
+                                </div>
+                                <p>{{ analysis.semantic_match_percentage|floatformat:1 }}% content relevance</p>
+                            </div>
+                            <div class="col-md-4">
+                                <h5>Overall Match</h5>
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar {% if analysis.match_percentage >= 70 %}bg-success{% elif analysis.match_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" style="width: {{ analysis.match_percentage }}%"></div>
+                                </div>
+                                <p>{{ analysis.match_percentage|floatformat:1 }}% total match score</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Skills Card -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4><i class="fas fa-tools me-2"></i> Skills Analysis</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <img src="data:image/png;base64,{{ charts.skills_chart }}" alt="Skills Comparison" class="img-fluid">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5 class="mb-3">Matched Skills ({{ analysis.matched_skills|length }})</h5>
+                                {% if analysis.matched_skills %}
+                                    {% for skill in analysis.matched_skills %}
+                                        <span class="skill-badge matched">{{ skill }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted">No matched skills found.</p>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <h5 class="mb-3">Missing Skills ({{ analysis.missing_skills|length }})</h5>
+                                {% if analysis.missing_skills %}
+                                    {% for skill in analysis.missing_skills %}
+                                        <span class="skill-badge missing">{{ skill }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted">No missing skills found.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Right Column: Sidebar with Recommendations -->
+            <div class="col-lg-4">
+                <!-- Contact Info Card -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4><i class="fas fa-user-circle me-2"></i> Applicant Information</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="contact-info">
+                            {% if analysis.contact_info.name %}
+                                <div class="contact-detail">
+                                    <i class="fas fa-user contact-icon"></i>
+                                    <strong>Name:</strong> {{ analysis.contact_info.name }}
+                                </div>
+                            {% endif %}
+                            {% if analysis.contact_info.email %}
+                                <div class="contact-detail">
+                                    <i class="fas fa-envelope contact-icon"></i>
+                                    <strong>Email:</strong> {{ analysis.contact_info.email }}
+                                </div>
+                            {% endif %}
+                            {% if analysis.contact_info.phone %}
+                                <div class="contact-detail">
+                                    <i class="fas fa-phone contact-icon"></i>
+                                    <strong>Phone:</strong> {{ analysis.contact_info.phone }}
+                                </div>
+                            {% endif %}
+                            {% if not analysis.contact_info.name and not analysis.contact_info.email and not analysis.contact_info.phone %}
+                                <p class="text-muted">No contact information detected in the resume.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <!-- Job Info Card -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4><i class="fas fa-briefcase me-2"></i> Job Details</h4>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Title:</strong> {{ job_title }}</p>
+                        <div>
+                            <p><strong>Description Preview:</strong></p>
+                            <p class="text-muted">{{ job_description|truncatechars:150 }}</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Recommendations Card -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4><i class="fas fa-lightbulb me-2"></i> Recommendations</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if analysis.recommendations %}
+                            {% for recommendation in analysis.recommendations %}
+                                <div class="recommendation-item">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    {{ recommendation }}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted">No specific recommendations available.</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <!-- Actions Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h4><i class="fas fa-cog me-2"></i> Actions</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'index' %}" class="btn btn-primary mb-2">
+                                <i class="fas fa-redo me-2"></i>New Analysis
+                            </a>
+                            <button class="btn btn-outline-primary mb-2" onclick="window.print()">
+                                <i class="fas fa-print me-2"></i>Print Results
+                            </button>
+                            <a href="{% url 'download_pdf' analysis_id %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-save me-2"></i>Save as PDF
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container text-center">
+            <p>© 2025 Resume Analyzer. All rights reserved.</p>
+        </div>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
