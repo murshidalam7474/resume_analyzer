@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resume Comparison Results - Resume Analyzer</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .match-score { font-size: 32px; font-weight: 700; }
+    .good { color: #28a745; }
+    .average { color: #ffc107; }
+    .poor { color: #dc3545; }
+    
+    .skill-badge { 
+      margin: 5px; 
+      padding: 8px 15px; 
+      border-radius: 20px; 
+      display: inline-block; 
+      font-weight: 500; 
+    }
+    .matched { background-color: #d4edda; color: #155724; }
+    .missing { background-color: #f8d7da; color: #721c24; }
+    .unique { background-color: #cce5ff; color: #004085; }
+    
+    .footer { 
+      background-color: #2c3e50; 
+      color: white; 
+      padding: 20px 0; 
+      margin-top: 60px; 
+    }
+    
+    .contact-info { 
+      background-color: #f8f9fa; 
+      border-radius: 5px; 
+      padding: 15px; 
+      margin-bottom: 20px; 
+    }
+    
+    .contact-detail { margin: 8px 0; }
+    .contact-icon { 
+      margin-right: 10px; 
+      width: 20px; 
+      text-align: center; 
+      color: #4a90e2; 
+    }
+    
+    .candidate-card {
+      transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+      cursor: pointer;
+    }
+    
+    .candidate-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+    
+    .ranking-badge {
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-color: #4a90e2;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1.2rem;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .first-place .ranking-badge {
+      background-color: #ffc107;
+      width: 50px;
+      height: 50px;
+      font-size: 1.5rem;
+    }
+    
+    .second-place .ranking-badge {
+      background-color: #6c757d;
+    }
+    
+    .third-place .ranking-badge {
+      background-color: #cd7f32;
+    }
+    
+    .modal-body { max-height: 500px; overflow-y: auto; }
+    
+    .comparison-section {
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .comparison-section h4 {
+      border-bottom: 2px solid #4a90e2;
+      padding-bottom: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .fight-icon {
+      animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+    
+    .placeholder-image {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+    
+    .candidate-vs-card {
+      border: none;
+      background: linear-gradient(to right, #f5f7fa, #c3cfe2);
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      overflow: hidden;
+      margin-bottom: 30px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .candidate-vs-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+    
+    .vs-circle {
+      width: 60px;
+      height: 60px;
+      background-color: #dc3545;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 24px;
+      margin: 0 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .head-to-head-btn {
+      background: linear-gradient(45deg, #ff416c, #ff4b2b);
+      border: none;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease;
+    }
+    
+    .head-to-head-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="bg-primary text-white py-4">
+    <div class="container d-flex justify-content-between align-items-center">
+      <h1>Resume Comparison Results</h1>
+      <div>
+        <a href="{% url 'compare_resumes' %}" class="btn btn-light me-2">
+          <i class="fas fa-people-arrows me-2"></i>New Comparison
+        </a>
+        <a href="{% url 'index' %}" class="btn btn-outline-light">
+          <i class="fas fa-home me-2"></i>Home
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container mt-4">
+    {% if error %}
+      <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        {{ error }}
+      </div>
+    {% else %}
+      <!-- Job Description Preview Card -->
+      <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h4><i class="fas fa-briefcase me-2"></i>Job Description</h4>
+          <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#jobDescriptionCollapse" aria-expanded="false">
+            <i class="fas fa-chevron-down"></i>
+          </button>
+        </div>
+        <div class="collapse" id="jobDescriptionCollapse">
+          <div class="card-body">
+            <p>{{ job_description|linebreaksbr }}</p>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Comparison Overview -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-light">
+              <h4><i class="fas fa-chart-bar me-2"></i>Comparison Overview</h4>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-lg-6">
+                  <canvas id="overallComparisonChart" height="300"></canvas>
+                </div>
+                <div class="col-lg-6">
+                  <canvas id="skillsComparisonChart" height="300"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Insights Section -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+              <h4><i class="fas fa-robot me-2"></i>AI Comparative Insights</h4>
+            </div>
+            <div class="card-body">
+              <div class="comparison-section">
+                <h4><i class="fas fa-users me-2"></i>Overall Comparison</h4>
+                <p>{{ comparative_insights.overall_comparison|linebreaksbr }}</p>
+              </div>
+              
+              <div class="comparison-section">
+                <h4><i class="fas fa-trophy me-2"></i>Top Candidate Analysis</h4>
+                <p>{{ comparative_insights.top_candidate_analysis|linebreaksbr }}</p>
+              </div>
+              
+              <div class="comparison-section">
+                <h4><i class="fas fa-user-check me-2"></i>Interview Recommendations</h4>
+                <p>{{ comparative_insights.interview_recommendations|linebreaksbr }}</p>
+              </div>
+              
+              <div class="comparison-section">
+                <h4><i class="fas fa-tools me-2"></i>Skill Distribution</h4>
+                <p>{{ comparative_insights.skill_distribution|linebreaksbr }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Common Skills -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+              <h4><i class="fas fa-check-circle me-2"></i>Common Skills Across All Candidates</h4>
+            </div>
+            <div class="card-body">
+              {% if chart_data.common_skills %}
+                {% for skill in chart_data.common_skills %}
+                  <span class="skill-badge matched">{{ skill }}</span>
+                {% endfor %}
+              {% else %}
+                <p class="text-muted">No common skills found across all candidates.</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ranked Candidates Section -->
+      <h3 class="mb-4">
+        <i class="fas fa-trophy me-2"></i>Ranked Candidates
+      </h3>
+      
+      <div class="row mb-4">
+        {% for analysis in analyses %}
+  <div class="col-lg-4">
+    <div class="card candidate-card {% if forloop.first %}first-place{% elif forloop.counter == 2 %}second-place{% elif forloop.counter == 3 %}third-place{% endif %}">
+      <div class="card-body position-relative">
+        <span class="ranking-badge">{{ forloop.counter }}</span>
+        <h5 class="card-title"><i class="fas fa-file-alt me-2"></i>{{ analysis.file_name }}</h5>
+        <p class="match-score {% if analysis.match_percentage >= 80 %}good{% elif analysis.match_percentage >= 50 %}average{% else %}poor{% endif %}">
+          {{ analysis.match_percentage }}%
+        </p>
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item"><strong>Skills Matched:</strong> {{ analysis.matched_skills|join:", " }}</li>
+          <li class="list-group-item"><strong>Missing Skills:</strong> {{ analysis.missing_skills|join:", " }}</li>
+          <li class="list-group-item"><strong>Skill Match:</strong> {{ analysis.skill_match_percentage }}%</li>
+          <li class="list-group-item"><strong>Semantic Match:</strong> {{ analysis.semantic_match_percentage }}%</li>
+        </ul>
+        <button class="btn btn-primary w-100 mt-3" data-bs-toggle="modal" data-bs-target="#detailsModal{{ forloop.counter }}">
+          View Details
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Detailed View -->
+  <div class="modal fade" id="detailsModal{{ forloop.counter }}" tabindex="-1" aria-labelledby="detailsModalLabel{{ forloop.counter }}" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="detailsModalLabel{{ forloop.counter }}">Detailed Analysis - {{ analysis.file_name }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p><strong>Overall Summary:</strong> {{ analysis.summary }}</p>
+          <p><strong>Recommendations:</strong></p>
+          <ul>
+            {% for rec in analysis.recommendations %}
+              <li>{{ rec }}</li>
+            {% endfor %}
+          </ul>
+          <p><strong>Contact Info:</strong> {{ analysis.contact_info }}</p>
+        </div>
+        <div class="modal-footer">
+            <a href="{% url 'download_pdf' analysis_id %}" class="btn btn-outline-danger">
+              <i class="fas fa-file-pdf"></i> Download PDF
+            </a>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+      </div>
+    </div>
+  </div>
+{% endfor %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Ensure chart_data is available and properly parsed as JSON object
+        var chartData = JSON.parse('{{ chart_data|escapejs }}');
+        
+        if (chartData) {
+          // Overall Comparison Chart - using match_percentages for all candidates
+          var ctxOverall = document.getElementById("overallComparisonChart").getContext("2d");
+          new Chart(ctxOverall, {
+            type: "bar",
+            data: {
+              labels: chartData.labels,
+              datasets: [{
+                label: "Overall Match Percentage",
+                data: chartData.match_percentages,
+                backgroundColor: "#28a745",
+                borderColor: "#1e7e34",
+                borderWidth: 1
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  max: 100
+                }
+              }
+            }
+          });
+          
+          // Skills Comparison Chart - showing matched vs missing skills
+          var ctxSkills = document.getElementById("skillsComparisonChart").getContext("2d");
+          new Chart(ctxSkills, {
+            type: "bar",
+            data: {
+              labels: chartData.labels,
+              datasets: [
+                {
+                  label: "Matched Skills",
+                  data: chartData.matched_skills_counts,
+                  backgroundColor: "#17a2b8",
+                  borderColor: "#138496",
+                  borderWidth: 1
+                },
+                {
+                  label: "Missing Skills",
+                  data: chartData.missing_skills_counts,
+                  backgroundColor: "#dc3545",
+                  borderColor: "#c82333",
+                  borderWidth: 1
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                y: {
+                  beginAtZero: true
+                }
+              }
+            }
+          });
+        }
+      });
+  </script>
+  
+</body>
+</html>
