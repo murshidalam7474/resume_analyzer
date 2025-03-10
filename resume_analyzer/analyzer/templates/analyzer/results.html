@@ -1,245 +1,523 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analysis Results - Resume Analyzer</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        .match-score { font-size: 64px; font-weight: 700; color: #333; }
-        .good { color: #28a745; }
-        .average { color: #ffc107; }
-        .poor { color: #dc3545; }
-        .skill-badge { margin: 5px; padding: 8px 15px; border-radius: 20px; display: inline-block; font-weight: 500; }
-        .matched { background-color: #d4edda; color: #155724; }
-        .missing { background-color: #f8d7da; color: #721c24; }
-        .recommendation-item { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
-        .progress-bar-container { height: 10px; background-color: #e9ecef; border-radius: 5px; margin-bottom: 20px; }
-        .progress-bar { height: 100%; border-radius: 5px; }
-        .dashboard-chart { margin-bottom: 30px; }
-        .btn-primary { background-color: #4a90e2; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 600; }
-        .footer { background-color: #2c3e50; color: white; padding: 20px 0; margin-top: 60px; }
-        .contact-info { background-color: #f8f9fa; border-radius: 5px; padding: 15px; margin-bottom: 20px; }
-        .contact-detail { margin: 8px 0; }
-        .contact-icon { margin-right: 10px; width: 20px; text-align: center; color: #4a90e2; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analysis Results - Resume Analyzer</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .match-score { font-size: 64px; font-weight: 700; }
+    .good { color: #28a745; }
+    .average { color: #ffc107; }
+    .poor { color: #dc3545; }
+    .skill-badge { margin: 5px; padding: 8px 15px; border-radius: 20px; display: inline-block; font-weight: 500; }
+    .matched { background-color: #d4edda; color: #155724; }
+    .missing { background-color: #f8d7da; color: #721c24; }
+    .recommendation-item { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
+    .footer { background-color: #2c3e50; color: white; padding: 20px 0; margin-top: 60px; }
+    .contact-info { background-color: #f8f9fa; border-radius: 5px; padding: 15px; margin-bottom: 20px; }
+    .contact-detail { margin: 8px 0; }
+    .contact-icon { margin-right: 10px; width: 20px; text-align: center; color: #4a90e2; }
+    .job-details-preview { cursor: pointer; }
+    .job-details-preview:hover { background-color: #f1f3f5; }
+    .modal-body { max-height: 500px; overflow-y: auto; }
+
+    .bot-icon {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 60px;
+        height: 60px;
+        background-color: #4a90e2;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        z-index: 1000;
+        transition: transform 0.3s ease;
+      }
+      .bot-icon:hover {
+        transform: scale(1.1);
+      }
+      .bot-icon img {
+        width: 40px;
+        height: 40px;
+      }
+      #botQuestionsModal .modal-body {
+        max-height: 500px;
+        overflow-y: auto;
+      }
+      .bot-question-btn {
+        margin: 5px;
+        text-align: left;
+        white-space: normal;
+      }
+  </style>
 </head>
 <body>
-    <!-- Header -->
-    <div class="header bg-primary text-white py-4">
-        <div class="container d-flex justify-content-between align-items-center">
-            <h1>Resume Analysis Results</h1>
-            <a href="{% url 'index' %}" class="btn btn-light">New Analysis</a>
-        </div>
+  <!-- Header -->
+  <div class="bg-primary text-white py-4">
+    <div class="container d-flex justify-content-between align-items-center">
+      <h1>Resume Analysis Results</h1>
+      <a href="{% url 'index' %}" class="btn btn-light">New Analysis</a>
     </div>
-    <div class="container mt-4">
-        <div class="row mb-4">
-            <div class="col-md-12">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Analysis completed for <strong>{{ job_title }}</strong> job description.
-                </div>
-            </div>
+  </div>
+
+  <div class="container mt-4">
+    {% if analysis.error %}
+      <div class="alert alert-danger">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        {{ analysis.error }}
+        {% if analysis.raw_response %}
+          <pre>{{ analysis.raw_response }}</pre>
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Analysis completed for the provided job description.
+          </div>
         </div>
-        <!-- Main Dashboard -->
-        <div class="row">
-            <!-- Left Column: Overall Match and Skills -->
-            <div class="col-lg-8">
-                <!-- Overall Match Card -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h4><i class="fas fa-percentage me-2"></i> Overall Match Score</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6 text-center py-4">
-                                <div class="match-score {% if analysis.match_percentage >= 70 %}good{% elif analysis.match_percentage >= 50 %}average{% else %}poor{% endif %}">
-                                    {{ analysis.match_percentage|floatformat:1 }}%
-                                </div>
-                                <p class="mt-2">
-                                    {% if analysis.match_percentage >= 70 %}
-                                        <span class="badge bg-success">Excellent Match</span>
-                                    {% elif analysis.match_percentage >= 50 %}
-                                        <span class="badge bg-warning text-dark">Good Match</span>
-                                    {% else %}
-                                        <span class="badge bg-danger">Needs Improvement</span>
-                                    {% endif %}
-                                </p>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="text-center mb-3">
-                                    <img src="data:image/png;base64,{{ charts.gauge_chart }}" alt="Match Percentage Gauge" class="img-fluid">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- Match Categories Card -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h4><i class="fas fa-chart-bar me-2"></i> Match Analysis</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-12">
-                                <img src="data:image/png;base64,{{ charts.match_types_chart }}" alt="Match Types Comparison" class="img-fluid">
-                            </div>
-                        </div>
-                        <div class="row mt-4">
-                            <div class="col-md-4">
-                                <h5>Skills Match</h5>
-                                <div class="progress-bar-container">
-                                    <div class="progress-bar {% if analysis.skill_match_percentage >= 70 %}bg-success{% elif analysis.skill_match_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" style="width: {{ analysis.skill_match_percentage }}%"></div>
-                                </div>
-                                <p>{{ analysis.skill_match_percentage|floatformat:1 }}% of required skills found</p>
-                            </div>
-                            <div class="col-md-4">
-                                <h5>Semantic Match</h5>
-                                <div class="progress-bar-container">
-                                    <div class="progress-bar {% if analysis.semantic_match_percentage >= 70 %}bg-success{% elif analysis.semantic_match_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" style="width: {{ analysis.semantic_match_percentage }}%"></div>
-                                </div>
-                                <p>{{ analysis.semantic_match_percentage|floatformat:1 }}% content relevance</p>
-                            </div>
-                            <div class="col-md-4">
-                                <h5>Overall Match</h5>
-                                <div class="progress-bar-container">
-                                    <div class="progress-bar {% if analysis.match_percentage >= 70 %}bg-success{% elif analysis.match_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" style="width: {{ analysis.match_percentage }}%"></div>
-                                </div>
-                                <p>{{ analysis.match_percentage|floatformat:1 }}% total match score</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- Skills Card -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h4><i class="fas fa-tools me-2"></i> Skills Analysis</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="row mb-4">
-                            <div class="col-12">
-                                <img src="data:image/png;base64,{{ charts.skills_chart }}" alt="Skills Comparison" class="img-fluid">
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h5 class="mb-3">Matched Skills ({{ analysis.matched_skills|length }})</h5>
-                                {% if analysis.matched_skills %}
-                                    {% for skill in analysis.matched_skills %}
-                                        <span class="skill-badge matched">{{ skill }}</span>
-                                    {% endfor %}
-                                {% else %}
-                                    <p class="text-muted">No matched skills found.</p>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-6">
-                                <h5 class="mb-3">Missing Skills ({{ analysis.missing_skills|length }})</h5>
-                                {% if analysis.missing_skills %}
-                                    {% for skill in analysis.missing_skills %}
-                                        <span class="skill-badge missing">{{ skill }}</span>
-                                    {% endfor %}
-                                {% else %}
-                                    <p class="text-muted">No missing skills found.</p>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+      </div>
+
+      <!-- Dashboard -->
+      <div class="row">
+        <!-- Left Column: Interactive Charts & Match Info -->
+        <div class="col-lg-8">
+          <!-- Overall Match Score Card -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h4><i class="fas fa-percentage me-2"></i> Overall Match Score</h4>
             </div>
-            <!-- Right Column: Sidebar with Recommendations -->
-            <div class="col-lg-4">
-                <!-- Contact Info Card -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h4><i class="fas fa-user-circle me-2"></i> Applicant Information</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="contact-info">
-                            {% if analysis.contact_info.name %}
-                                <div class="contact-detail">
-                                    <i class="fas fa-user contact-icon"></i>
-                                    <strong>Name:</strong> {{ analysis.contact_info.name }}
-                                </div>
-                            {% endif %}
-                            {% if analysis.contact_info.email %}
-                                <div class="contact-detail">
-                                    <i class="fas fa-envelope contact-icon"></i>
-                                    <strong>Email:</strong> {{ analysis.contact_info.email }}
-                                </div>
-                            {% endif %}
-                            {% if analysis.contact_info.phone %}
-                                <div class="contact-detail">
-                                    <i class="fas fa-phone contact-icon"></i>
-                                    <strong>Phone:</strong> {{ analysis.contact_info.phone }}
-                                </div>
-                            {% endif %}
-                            {% if not analysis.contact_info.name and not analysis.contact_info.email and not analysis.contact_info.phone %}
-                                <p class="text-muted">No contact information detected in the resume.</p>
-                            {% endif %}
-                        </div>
-                    </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-6 text-center py-4">
+                  <div class="match-score {% if analysis.match_percentage >= 70 %}good{% elif analysis.match_percentage >= 50 %}average{% else %}poor{% endif %}">
+                    {{ analysis.match_percentage|floatformat:1 }}%
+                  </div>
+                  <p class="mt-2">
+                    {% if analysis.match_percentage >= 70 %}
+                      <span class="badge bg-success">Excellent Match</span>
+                    {% elif analysis.match_percentage >= 50 %}
+                      <span class="badge bg-warning text-dark">Good Match</span>
+                    {% else %}
+                      <span class="badge bg-danger">Needs Improvement</span>
+                    {% endif %}
+                  </p>
                 </div>
-                <!-- Job Info Card -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h4><i class="fas fa-briefcase me-2"></i> Job Details</h4>
-                    </div>
-                    <div class="card-body">
-                        <p><strong>Title:</strong> {{ job_title }}</p>
-                        <div>
-                            <p><strong>Description Preview:</strong></p>
-                            <p class="text-muted">{{ job_description|truncatechars:150 }}</p>
-                        </div>
-                    </div>
+                <div class="col-md-6">
+                  <canvas id="gaugeChart" style="max-height:300px;"></canvas>
                 </div>
-                <!-- Recommendations Card -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h4><i class="fas fa-lightbulb me-2"></i> Recommendations</h4>
-                    </div>
-                    <div class="card-body">
-                        {% if analysis.recommendations %}
-                            {% for recommendation in analysis.recommendations %}
-                                <div class="recommendation-item">
-                                    <i class="fas fa-check-circle me-2"></i>
-                                    {{ recommendation }}
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <p class="text-muted">No specific recommendations available.</p>
-                        {% endif %}
-                    </div>
-                </div>
-                <!-- Actions Card -->
-                <div class="card">
-                    <div class="card-header">
-                        <h4><i class="fas fa-cog me-2"></i> Actions</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-grid gap-2">
-                            <a href="{% url 'index' %}" class="btn btn-primary mb-2">
-                                <i class="fas fa-redo me-2"></i>New Analysis
-                            </a>
-                            <button class="btn btn-outline-primary mb-2" onclick="window.print()">
-                                <i class="fas fa-print me-2"></i>Print Results
-                            </button>
-                            <a href="{% url 'download_pdf' analysis_id %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-save me-2"></i>Save as PDF
-                            </a>
-                        </div>
-                    </div>
-                </div>
+              </div>
             </div>
+          </div>
+
+          <!-- Match Types Comparison Card -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h4><i class="fas fa-chart-bar me-2"></i> Match Analysis</h4>
+            </div>
+            <div class="card-body">
+              <canvas id="matchTypesChart" style="max-height:300px;"></canvas>
+              <div class="row mt-4">
+                <div class="col-md-4">
+                  <h5>Skills Match</h5>
+                  <p>{{ analysis.skill_match_percentage|floatformat:1 }}% of required skills found</p>
+                </div>
+                <div class="col-md-4">
+                  <h5>Semantic Match</h5>
+                  <p>{{ analysis.semantic_match_percentage|floatformat:1 }}% content relevance</p>
+                </div>
+                <div class="col-md-4">
+                  <h5>Overall Match</h5>
+                  <p>{{ analysis.match_percentage|floatformat:1 }}% total match score</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Skills Analysis Card -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h4><i class="fas fa-tools me-2"></i> Skills Analysis</h4>
+            </div>
+            <div class="card-body">
+              <canvas id="skillsChart" style="max-height:300px;"></canvas>
+              <div class="row mt-3">
+                <div class="col-md-6">
+                  <h5>Matched Skills ({{ analysis.matched_skills|length }})</h5>
+                  {% if analysis.matched_skills %}
+                    {% for skill in analysis.matched_skills %}
+                      <span class="skill-badge matched">{{ skill }}</span>
+                    {% endfor %}
+                  {% else %}
+                    <p class="text-muted">No matched skills found.</p>
+                  {% endif %}
+                </div>
+                <div class="col-md-6">
+                  <h5>Missing Skills ({{ analysis.missing_skills|length }})</h5>
+                  {% if analysis.missing_skills %}
+                    {% for skill in analysis.missing_skills %}
+                      <span class="skill-badge missing">{{ skill }}</span>
+                    {% endfor %}
+                  {% else %}
+                    <p class="text-muted">No missing skills found.</p>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <!-- Right Column: Applicant Info, Job Details, Recommendations -->
+        <div class="col-lg-4">
+          <!-- Applicant Information -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h4><i class="fas fa-user-circle me-2"></i> Applicant Information</h4>
+            </div>
+            <div class="card-body">
+              <div class="contact-info">
+                {% if analysis.contact_info.name %}
+                  <div class="contact-detail">
+                    <i class="fas fa-user contact-icon"></i>
+                    <strong>Name:</strong> {{ analysis.contact_info.name }}
+                  </div>
+                {% endif %}
+                {% if analysis.contact_info.email %}
+                  <div class="contact-detail">
+                    <i class="fas fa-envelope contact-icon"></i>
+                    <strong>Email:</strong> {{ analysis.contact_info.email }}
+                  </div>
+                {% endif %}
+                {% if analysis.contact_info.phone %}
+                  <div class="contact-detail">
+                    <i class="fas fa-phone contact-icon"></i>
+                    <strong>Phone:</strong> {{ analysis.contact_info.phone }}
+                  </div>
+                {% endif %}
+                {% if not analysis.contact_info.name and not analysis.contact_info.email and not analysis.contact_info.phone %}
+                  <p class="text-muted">No contact information detected in the resume.</p>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Job Details -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h4><i class="fas fa-briefcase me-2"></i> Job Details</h4>
+            </div>
+            <div class="card-body job-details-preview" data-bs-toggle="modal" data-bs-target="#jobDetailsModal">
+              <p><strong>Description Preview:</strong></p>
+              <p class="text-muted">{{ job_description|truncatechars:150 }}</p>
+            </div>
+          </div>
+
+          <!-- Job Details Modal -->
+          <div class="modal fade" id="jobDetailsModal" tabindex="-1" aria-labelledby="jobDetailsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title" id="jobDetailsModalLabel">
+                    <i class="fas fa-briefcase me-2"></i>Complete Job Description
+                  </h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                  <div class="job-details-content">
+                    {{ job_description }}
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recommendations -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h4><i class="fas fa-lightbulb me-2"></i> Recommendations</h4>
+            </div>
+            <div class="card-body">
+              {% if analysis.recommendations %}
+                {% for recommendation in analysis.recommendations %}
+                  <div class="recommendation-item">
+                    <i class="fas fa-check-circle me-2"></i>
+                    {{ recommendation }}
+                  </div>
+                {% endfor %}
+              {% else %}
+                <p class="text-muted">No specific recommendations available.</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="card">
+            <div class="card-header">
+              <h4><i class="fas fa-cog me-2"></i> Actions</h4>
+            </div>
+            <div class="card-body">
+              <div class="d-grid gap-2">
+                <a href="{% url 'index' %}" class="btn btn-primary mb-2">
+                  <i class="fas fa-redo me-2"></i>New Analysis
+                </a>
+                <button class="btn btn-outline-primary mb-2" onclick="window.print()">
+                  <i class="fas fa-print me-2"></i>Print Results
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+  <div class="bot-icon" data-bs-toggle="modal" data-bs-target="#botQuestionsModal">
+    <i class="fas fa-robot me-2"></i>
+  </div>
+
+  <div class="modal fade" id="botQuestionsModal" tabindex="-1" aria-labelledby="botQuestionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="botQuestionsModalLabel">
+            <i class="fas fa-robot me-2"></i>HR Candidate Assessment Bot
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="container-fluid">
+            <h4 class="mb-4">Quick Candidate Insights</h4>
+            
+            <div class="row">
+              <div class="col-12 mb-3">
+                <button class="btn btn-outline-primary btn-lg btn-block bot-question-btn" data-question="Is the candidate a good fit for this role?">
+                  <i class="fas fa-bullseye me-2"></i>Is the candidate a good fit for this role?
+                </button>
+                <button class="btn btn-outline-primary btn-lg btn-block bot-question-btn" data-question="Do the candidate's skills fully match the job requirements?">
+                  <i class="fas fa-check-circle me-2"></i>Do the candidate's skills fully match the job requirements?
+                </button>
+                <button class="btn btn-outline-primary btn-lg btn-block bot-question-btn" data-question="What are the top strengths of this candidate?">
+                  <i class="fas fa-star me-2"></i>What are the top strengths of this candidate?
+                </button>
+                <button class="btn btn-outline-primary btn-lg btn-block bot-question-btn" data-question="What additional skills or training might this candidate need?">
+                  <i class="fas fa-graduation-cap me-2"></i>What additional skills or training might this candidate need?
+                </button>
+                <button class="btn btn-outline-primary btn-lg btn-block bot-question-btn" data-question="How does this candidate compare to the ideal candidate profile?">
+                  <i class="fas fa-chart-line me-2"></i>How does this candidate compare to the ideal candidate profile?
+                </button>
+                <button class="btn btn-outline-primary btn-lg btn-block bot-question-btn" data-question="Are there any red flags or concerns in this candidate's profile?">
+                  <i class="fas fa-exclamation-triangle me-2"></i>Are there any red flags or concerns in this candidate's profile?
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div id="botResponseArea" class="w-100">
+            <div class="alert alert-info" id="botLoadingMessage" style="display:none;">
+              <i class="fas fa-spinner fa-spin me-2"></i>Analyzing your question...
+            </div>
+            <div id="botResponse" class="mt-3"></div>
+          </div>
+        </div>
+      </div>
     </div>
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container text-center">
-            <p>© 2025 Resume Analyzer. All rights reserved.</p>
-        </div>
-    </footer>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  </div>
+  <a href="{% url 'compare_resumes' %}" class="btn btn-success mb-2">
+    <i class="fas fa-people-arrows me-2"></i>Compare Multiple Resumes
+  </a>
+  <footer class="footer">
+    <div class="container text-center">
+      <p>© 2025 Resume Analyzer. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <!-- Chart.js Initialization Script -->
+  <script>
+    // Get chart data passed from the view
+    var chartData = {{ chart_data|safe }};
+    
+    // Function to create responsive charts
+    function createResponsiveChart(ctx, type, labels, data, backgroundColors, title) {
+        return new Chart(ctx, {
+            type: type,
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Percentage',
+                    data: data,
+                    backgroundColor: backgroundColors,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { 
+                        beginAtZero: true, 
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    title: { 
+                        display: true, 
+                        text: title 
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.y + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Gauge Chart (Doughnut) for Overall Match Percentage
+    var ctxGauge = document.getElementById('gaugeChart').getContext('2d');
+    var gaugeChart = new Chart(ctxGauge, {
+        type: 'doughnut',
+        data: {
+            labels: ['Match', 'Remaining'],
+            datasets: [{
+                data: [chartData.gauge.match_percentage, 100 - chartData.gauge.match_percentage],
+                backgroundColor: [
+                    chartData.gauge.match_percentage >= 70 ? '#4CAF50' :
+                    chartData.gauge.match_percentage >= 50 ? '#FFC107' : '#F44336',
+                    '#EEEEEE'
+                ],
+                hoverOffset: 4,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            cutout: '70%',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: true },
+                title: {
+                    display: true,
+                    text: 'Overall Match'
+                }
+            }
+        }
+    });
+
+    // Skills Comparison Bar Chart
+    var ctxSkills = document.getElementById('skillsChart').getContext('2d');
+    var skillsChart = createResponsiveChart(
+        ctxSkills, 
+        'bar', 
+        ['Matched Skills', 'Missing Skills'], 
+        [chartData.skills.matched, chartData.skills.missing], 
+        ['#4CAF50', '#F44336'],
+        'Skills Comparison'
+    );
+
+    // Match Types Comparison Bar Chart
+    var ctxMatchTypes = document.getElementById('matchTypesChart').getContext('2d');
+    var matchTypesChart = createResponsiveChart(
+        ctxMatchTypes, 
+        'bar', 
+        ['Skills Match', 'Semantic Match', 'Overall Match'], 
+        [
+            chartData.match_types.skill_match,
+            chartData.match_types.semantic_match,
+            chartData.match_types.overall_match
+        ],
+        [
+            chartData.match_types.semantic_match >= 70 ? '#4CAF50' :
+            chartData.match_types.semantic_match >= 50 ? '#FFC107' : '#F44336',
+            chartData.match_types.overall_match >= 70 ? '#4CAF50' :
+            chartData.match_types.overall_match >= 50 ? '#FFC107' : '#F44336'
+        ],
+        'Match Type Comparison'
+    );
+
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const botQuestionButtons = document.querySelectorAll('.bot-question-btn');
+        const botLoadingMessage = document.getElementById('botLoadingMessage');
+        const botResponse = document.getElementById('botResponse');
+        const analysisId = "{{ analysis_id }}";  // Django will inject the analysis ID
+      
+        botQuestionButtons.forEach(button => {
+          button.addEventListener('click', function() {
+            const question = this.getAttribute('data-question');
+      
+            // Clear previous response
+            botResponse.innerHTML = '';
+            botLoadingMessage.style.display = 'block';
+      
+            // Make AJAX call to bot question endpoint
+            fetch("/bot-question/", {  // Use the full path
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'  // Important for Django CSRF protection
+              },
+              body: JSON.stringify({
+                analysis_id: analysisId,
+                question: question
+              })
+            })
+            .then(response => response.json())
+            .then(data => {
+              botLoadingMessage.style.display = 'none';
+              
+              if (data.error) {
+                // Handle error scenario
+                botResponse.innerHTML = `
+                  <div class="alert alert-danger">
+                    <strong>Error:</strong> ${data.error}
+                  </div>
+                `;
+              } else {
+                // Display bot response
+                botResponse.innerHTML = `
+                  <div class="card">
+                    <div class="card-body">
+                      <h5 class="card-title">AI Insight</h5>
+                      <p class="card-text">${data.response}</p>
+                    </div>
+                  </div>
+                `;
+              }
+            })
+            .catch(error => {
+              botLoadingMessage.style.display = 'none';
+              botResponse.innerHTML = `
+                <div class="alert alert-danger">
+                  <strong>Network Error:</strong> ${error.message}
+                </div>
+              `;
+            });
+          });
+        });
+      });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
